@@ -1,4 +1,5 @@
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 
 const BASE_URL = "https://tender-frontend-eight.vercel.app";
 
@@ -11,14 +12,19 @@ const BASE_URL = "https://tender-frontend-eight.vercel.app";
  */
 export async function scrapeEligibleTenders(minMonthsAhead = 3) {
   const browser = await puppeteer.launch({
-  headless: "new",
-  args: [
-    "--no-sandbox",
-    "--disable-setuid-sandbox",
-    "--disable-dev-shm-usage",
-    "--disable-gpu",
-    "--single-process"
-  ]
+  args: process.env.RENDER
+    ? chromium.args
+    : [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--single-process"
+      ],
+  executablePath: process.env.RENDER
+    ? await chromium.executablePath()
+    : undefined,
+  headless: true
 });
 
   const page = await browser.newPage();
