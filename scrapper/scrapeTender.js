@@ -35,5 +35,18 @@ export async function scrapeTender(url) {
   });
 
   await browser.close();
+
+  // 🗓️ FILTER LOGIC
+  const today = new Date();
+  const threeMonthsLater = new Date();
+  threeMonthsLater.setMonth(today.getMonth() + 3);
+
+  const deadlineDate = new Date(data.submission_deadline);
+
+  // If deadline is invalid or less than 3 months away → skip
+  if (isNaN(deadlineDate) || deadlineDate < threeMonthsLater) {
+    return null;
+  }
+
   return data;
 }

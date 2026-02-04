@@ -12,7 +12,12 @@ async function run() {
   for (const link of links) {
     console.log("📄 Scraping:", link);
     const tender = await scrapeTender(link);
-    results.push(tender);
+
+    if (tender) {
+      results.push(tender);
+    } else {
+      console.log("⏭️ Skipped (deadline < 3 months)");
+    }
   }
 
   console.log("✅ FINAL OUTPUT:");
