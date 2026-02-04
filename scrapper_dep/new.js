@@ -11,9 +11,15 @@ const BASE_URL = "https://tender-frontend-eight.vercel.app";
  */
 export async function scrapeEligibleTenders(minMonthsAhead = 3) {
   const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"]
-  });
+  headless: "new",
+  args: [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--single-process"
+  ]
+});
 
   const page = await browser.newPage();
   await page.goto(BASE_URL, { waitUntil: "networkidle2" });
