@@ -84,7 +84,7 @@ export async function scrapeEligibleTenders(minMonthsAhead = 3) {
       const deadlineDate = new Date(tender.submission_deadline);
 
       // 3️⃣ Apply filter
-      if (!isNaN(deadlineDate) && deadlineDate >= thresholdDate) {
+      if (!isNaN(deadlineDate) && deadlineDate <= thresholdDate) {
         results.push(tender);
       }
     } catch (err) {
