@@ -1,7 +1,7 @@
 import puppeteer from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 
-const BASE_URL = "https://tender-frontend-eight.vercel.app";
+// const BASE_URL = "https://tender-frontend-eight.vercel.app";
 
 /**
  * Scrapes tenders whose submission deadline
@@ -10,7 +10,7 @@ const BASE_URL = "https://tender-frontend-eight.vercel.app";
  * @param {number} minMonthsAhead - default 3
  * @returns {Promise<Array<Object>>}
  */
-export async function scrapeEligibleTenders(minMonthsAhead = 3) {
+export async function scrapeEligibleTenders(baseUrl ,minMonthsAhead = 3) {
   const browser = await puppeteer.launch({
   args: process.env.RENDER
     ? chromium.args
@@ -28,7 +28,7 @@ export async function scrapeEligibleTenders(minMonthsAhead = 3) {
 });
 
   const page = await browser.newPage();
-  await page.goto(BASE_URL, { waitUntil: "networkidle2" });
+  await page.goto(baseUrl, { waitUntil: "networkidle2" });
 
   await page.waitForSelector(".card a", { timeout: 10000 });
 
@@ -39,7 +39,7 @@ export async function scrapeEligibleTenders(minMonthsAhead = 3) {
       .filter(href => href && href.startsWith("/tender/"))
   );
 
-  const uniqueLinks = [...new Set(links)].map(l => BASE_URL + l);
+  const uniqueLinks = [...new Set(links)].map(l => baseUrl + l);
 
   const results = [];
 
