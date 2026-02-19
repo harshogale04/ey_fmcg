@@ -1,64 +1,48 @@
 import puppeteer from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 
-// const BASE_URL = "https://tender-frontend-eight.vercel.app";
+export async function scrapeEligibleTenders(baseUrl, minMonthsAhead = 3) {
 
-/**
- * Scrapes tenders whose submission deadline
- * is at least `minMonthsAhead` months from now.
- *
- * @param {number} minMonthsAhead - default 3
- * @returns {Promise<Array<Object>>}
- */
-export async function scrapeEligibleTenders(baseUrl ,minMonthsAhead = 3) {
   const browser = await puppeteer.launch({
-  args: process.env.RENDER
-    ? chromium.args
-    : [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--single-process"
-      ],
-  executablePath: process.env.RENDER
-    ? await chromium.executablePath()
-    : undefined,
-  headless: true
-});
+    args: chromium.args,
+    executablePath: await chromium.executablePath(),
+    headless: true
+  });
 
   const page = await browser.newPage();
-  await page.goto(baseUrl, { waitUntil: "networkidle2" });
 
-  await page.waitForSelector(".card a", { timeout: 10000 });
+  // ✅ React-friendly load
+  await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
 
-  // 1️⃣ Get tender links
+  // ✅ Wait until cards REALLY appear
+  await page.waitForFunction(() => {
+    return document.querySelectorAll(".card a").length > 0;
+  }, { timeout: 25000 });
+
+  // ✅ Extract links safely
   const links = await page.$$eval(".card a", anchors =>
     anchors
-      .map(a => a.getAttribute("href"))
-      .filter(href => href && href.startsWith("/tender/"))
+      .map(a => a.href)
+      .filter(href => href && href.includes("tender"))
   );
 
-  const uniqueLinks = [...new Set(links)].map(l => baseUrl + l);
+  const uniqueLinks = [...new Set(links)];
 
   const results = [];
 
-  // Date threshold
   const today = new Date();
   const thresholdDate = new Date();
   thresholdDate.setMonth(today.getMonth() + minMonthsAhead);
 
-  // 2️⃣ Scrape each tender
   for (const url of uniqueLinks) {
     const tenderPage = await browser.newPage();
-    await tenderPage.goto(url, { waitUntil: "networkidle2" });
+    await tenderPage.goto(url, { waitUntil: "domcontentloaded" });
 
     try {
-      await tenderPage.waitForSelector(".doc-title", { timeout: 8000 });
+      await tenderPage.waitForSelector(".doc-title", { timeout: 10000 });
 
       const tender = await tenderPage.evaluate(() => {
         const clean = t => t?.replace(/\s+/g, " ").trim();
-
         const metaEls = document.querySelectorAll(".meta p");
 
         const sections = {};
@@ -73,9 +57,7 @@ export async function scrapeEligibleTenders(baseUrl ,minMonthsAhead = 3) {
           issued_by: clean(metaEls[0]?.innerText.replace("Issued By:", "")),
           rfp_reference: clean(metaEls[1]?.innerText.replace("RFP Reference No.:", "")),
           date_issued: clean(metaEls[2]?.innerText.replace("Date Issued:", "")),
-          submission_deadline: clean(
-            metaEls[3]?.innerText.replace("Submission Deadline:", "")
-          ),
+          submission_deadline: clean(metaEls[3]?.innerText.replace("Submission Deadline:", "")),
           category: clean(metaEls[4]?.innerText.replace("Category:", "")),
           sections
         };
@@ -83,12 +65,12 @@ export async function scrapeEligibleTenders(baseUrl ,minMonthsAhead = 3) {
 
       const deadlineDate = new Date(tender.submission_deadline);
 
-      // 3️⃣ Apply filter
       if (!isNaN(deadlineDate) && deadlineDate <= thresholdDate) {
         results.push(tender);
       }
-    } catch (err) {
-      console.log(`⚠️ Skipped (error): ${url}`);
+
+    } catch {
+      console.log("Skipped:", url);
     } finally {
       await tenderPage.close();
     }

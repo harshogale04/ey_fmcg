@@ -5,24 +5,29 @@ const app = express();
 
 app.get("/scrape", async (req, res) => {
   const months = Number(req.query.months) || 3;
-  const baseUrl = req.query.url.replace(/\/$/, "");
 
-  if (!baseUrl) {
+  // ✅ SAFE CHECK FIRST
+  if (!req.query.url) {
     return res.status(400).json({
       success: false,
       message: "Missing required query param: url"
     });
   }
 
+  const baseUrl = req.query.url.replace(/\/$/, "");
+
   try {
     const tenders = await scrapeEligibleTenders(baseUrl, months);
+
     res.json({
       success: true,
       count: tenders.length,
       data: tenders
     });
+
   } catch (err) {
-    console.error(err);
+    console.error("SCRAPE ERROR:", err);
+
     res.status(500).json({
       success: false,
       message: "Scraping failed"
